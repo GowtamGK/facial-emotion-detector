@@ -4,7 +4,6 @@ Cloud-ready version - webcam capture happens in browser
 """
 
 from flask import Flask, render_template, request, jsonify
-from fer import FER
 import numpy as np
 import cv2
 import base64
@@ -12,10 +11,18 @@ import os
 
 app = Flask(__name__)
 
-# Initialize detector globally
-print("Loading emotion detection model...")
-detector = FER(mtcnn=True)
-print("Model loaded successfully!")
+# Lazy loading - detector will be initialized on first request
+detector = None
+
+def get_detector():
+    """Lazy load the FER detector"""
+    global detector
+    if detector is None:
+        print("Loading emotion detection model...")
+        from fer import FER
+        detector = FER(mtcnn=True)
+        print("Model loaded successfully!")
+    return detector
 
 # Emotion colors for drawing
 EMOTION_COLORS = {
@@ -53,8 +60,11 @@ def analyze():
         if frame is None:
             return jsonify({'error': 'Could not decode image'}), 400
         
+        # Get detector (lazy load)
+        det = get_detector()
+        
         # Detect emotions
-        result = detector.detect_emotions(frame)
+        result = det.detect_emotions(frame)
         
         if result:
             face = result[0]
@@ -110,7 +120,13 @@ def analyze():
 @app.route('/health')
 def health():
     """Health check endpoint for Render"""
-    return jsonify({'status': 'healthy', 'model_loaded': detector is not None})
+    return jsonify({'status': 'healthy'})
+
+@app.route('/warmup')
+def warmup():
+    """Endpoint to pre-load the model"""
+    get_detector()
+    return jsonify({'status': 'model loaded'})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
