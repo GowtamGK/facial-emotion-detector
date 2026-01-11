@@ -1,6 +1,7 @@
 flask==3.0.0
-opencv-python==4.8.1.78
+opencv-python-headless==4.8.1.78
 fer==22.5.1
 tensorflow==2.15.0
 numpy>=1.23.0
 moviepy==1.0.3
+gunicorn==21.2.0
